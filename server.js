@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
+const bodyParser = require('body-parser'); // Import body-parser middleware
+const axios = require('axios')
 
 const app = express();
 const PORT = 3000;
@@ -14,6 +16,9 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .catch((err) => {
     console.error('Error connecting to MongoDB:', err);
   });
+
+// Parse JSON bodies
+app.use(bodyParser.json());
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
@@ -45,6 +50,43 @@ app.post('/check_credential', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
+
+app.post('/api/chatbard', async (req, res) => {
+  try {
+      const userInput = req.body.messages[0].content; // Extract the user's message from the request body
+      console.log(userInput, "user data")
+
+      // Send the user's message to the Bard AI API
+      const bardApiResponse = await axios.post('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent', {
+          contents: [
+              {
+                  parts: [
+                      {
+                          text: userInput
+                      }
+                  ]
+              }
+          ]
+      }, {
+          params: {
+              key: 'AIzaSyDdjRGSIZ1oaCm_I9dbQhVP_tU6AvT2-YM' // Replace 'YOUR_BARD_AI_API_KEY' with your actual Bard AI API key
+          }
+      });
+
+      const responseData = bardApiResponse.data;
+      const text = responseData.candidates[0].content.parts[0].text;
+
+      console.log(text, "test")
+
+        // Send only the text property back to the client
+        res.json( text );
+  } catch (error) {
+      console.error('Error handling chatbard request:', error);
+      res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 // Start the server
 app.listen(PORT, () => {
